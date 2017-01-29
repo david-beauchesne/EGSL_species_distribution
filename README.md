@@ -2,7 +2,7 @@
 
 ## Authors
 
-David Beauchesne, Kévin Cazelles 
+David Beauchesne
 
 
 ## License
