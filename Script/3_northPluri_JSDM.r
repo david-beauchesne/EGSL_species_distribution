@@ -36,6 +36,8 @@ library(magrittr)
     library(corrplot)
     library(circlize)
 
+# Functions
+    source('./Script/crossValid.r')
 
 # Importing data required data from RawData
     northPluri <- readRDS('./RData/northPluriCor.rds')
@@ -54,12 +56,12 @@ library(magrittr)
 # Remove NAs from environmental variables selected for analysis
 # -------------------------------------------------------------
 
-NAs <- northPluri[, envCov] %>%
-        lapply(X = ., FUN = function(x) which(is.na(x))) %>%
-        unlist(.) %>%
-        unique(.)
+    NAs <- northPluri[, envCov] %>%
+            lapply(X = ., FUN = function(x) which(is.na(x))) %>%
+            unlist(.) %>%
+            unique(.)
 
-northPluri <- northPluri[-NAs, ]
+    northPluri <- northPluri[-NAs, ]
 
 # ========================================
 # 1. Formatting the data for HMSC analysis
@@ -119,6 +121,7 @@ northPluri <- northPluri[-NAs, ]
     # ----------------------------
         # Creating HMSC dataset for analyses
             northPluri_HMSC <- as.HMSCdata(Y = Y, X = X, Random = Pi, interceptX = T, scaleX = T)
+            saveRDS(northPluri_HMSC, file = './RData/northPluri_HMSC.rds')
 
 # ===============================
 # 2. Performing the MCMC sampling
@@ -132,7 +135,6 @@ northPluri <- northPluri[-NAs, ]
     #                   nburn = 1000,
     #                   thin = 10)
 
-    # Eventually : To obtain a highly accurate sample of the posterior, the chain could be ran e.g. 10 times longer, so up to 100,000 iterations, and then thinned, e.g. by a factor of 100 to produce 1000 essentially independent samples from the posterior.
         model <- hmsc(northPluri_HMSC,
                       family = "probit",
                       niter = 100000,
@@ -151,6 +153,9 @@ northPluri <- northPluri[-NAs, ]
         mixingMeansParamX <- as.mcmc(model, parameters = "meansParamX")
         mixingMeansVarX <- as.mcmc(model, parameters = "varX")
         mixingParamLatent <- as.mcmc(model, parameters = "paramLatent")
+
+    # Save meanParamX for trace and density plots
+    saveRDS(mixingMeansParamX, file = './RData/mixingMeansParamX.rds')
 
     # Trace and density plots to visually diagnose mcmc chains
     # Another way to check for convergence is to use diagnostic tests such as Geweke's convergence diagnostic (geweke.diag function in coda) and the Gelman and Rubin's convergence diagnostic (gelman.diag function in coda).
@@ -192,8 +197,8 @@ northPluri <- northPluri[-NAs, ]
         colnames(paramXCITable) <- c("average", "lowerCI", "upperCI")
         rownames(paramXCITable) <- paste(rep(colnames(average), each = nrow(average)), "_", rep(rownames(average), ncol(average)), sep="")
 
-      # Print summary table
-        paramXCITable
+      # Save summary table
+        saveRDS(paramXCITable, file = './RData/modelPostSumm.rds')
 
     # Credible intervals
         paramXCITable_Full <- paramXCITable
@@ -221,13 +226,14 @@ northPluri <- northPluri[-NAs, ]
         mtext(text = sp[,'N_EspSci'], side = 1, line = 1, outer = FALSE, at = 1:124, col = 1, las = 2, cex = 0.4)
         dev.off()
 
-# ========================
-# 5. Variance partitioning
-# ========================
+# =========================
+# 5.1 Variance partitioning
+# =========================
 
     # for parameter names: colnames(mixingMeansParamX)
     nGroup <- length(unique(envGroup)) + 2
     variationPart <- variPart(model, envGroup)
+    saveRDS(variationPart, file = './RData/variPart.rds')
 
     Colour <- rainbow(n = nGroup, s = 1, v = 1, start = 0, end = max(1, nGroup - 1)/nGroup, alpha = 1)
 
@@ -246,11 +252,21 @@ northPluri <- northPluri[-NAs, ]
         legend('bottomleft', legend = legendVector, fill = Colour, bg = 'white', cex = 0.5)
     dev.off()
 
+# ========================================================================
+# 5.2 Variance partitioning for individual parameters (species diagnotics)
+# ========================================================================
+
+    # Extract variance partitioning per parameters for individual taxa diagnostics
+        nGroup <- length(envCov) + 2
+        variationPart <- variPart(model, c('Intercept',envCov))
+        saveRDS(variationPart, file = './RData/variPartInd.rds')
+
 # =======================
 # 6. Association networks
 # =======================
     # Extract all estimated associatin matrix
         assoMat <- corRandomEff(model)
+
     # Average
         siteMean <- apply(assoMat[, , , 1], 1:2, mean)
         plotMean <- apply(assoMat[, , , 2], 1:2, mean)
@@ -317,6 +333,10 @@ northPluri <- northPluri[-NAs, ]
         R2 <- Rsquared(model, averageSp = FALSE)
         R2comm <- Rsquared(model, averageSp = TRUE)
 
+    # Save R^2 calculation for individual summaries
+        saveRDS(R2, file = './RData/modelR2.rds')
+        saveRDS(R2comm, file = './RData/modelR2comm.rds')
+
     # Draw figure
         jpeg(paste(fig,'r2summaries.jpeg',sep=''), width = 6, height = 5, res = 150, units = 'in')
         plot(prevSp, R2, xlab = "Prevalence", ylab = expression(R^2), cex = 0.8, pch=19, las=1, cex.lab = 1, main = 'Explanatory power of the model')
@@ -329,9 +349,79 @@ northPluri <- northPluri[-NAs, ]
     ### Full joint probability distribution
         # fullPost <- jposterior(model)
 
-# ===========================================
-# 8. Generating predictions for training data
-# ===========================================
+# =============================================
+# 8. Generating predictions for validation data
+# =============================================
 
-    # Predictions made for planning units used in the model generation
-        # predTrain <- predict(model)
+    modelAUC <- crossValidation(data = northPluri_HMSC,  nCV = 20, validPct = 0.2)
+    saveRDS(modelAUC, file = './RData/modelAUC.rds')
+
+    meanAUC <- colMeans(modelAUC)
+    sdAUC <- apply(modelAUC, MARGIN = 2, FUN = sd)
+
+    jpeg(paste(fig,'crossValidation.jpeg',sep=''), width = 6, height = 5, res = 150, units = 'in')
+        plot(prevSp, meanAUC, ylim = c(0,1), xlab = "Prevalence", ylab = 'AUC', cex = 0.8, pch=19, las=1, cex.lab = 1, main = 'Monte Carlo cross-validation with AUC of ROC curves')
+        abline(h = 0.5, col = 'grey')
+        arrows(x0 = prevSp, x1 = prevSp, y0 = (meanAUC - sdAUC), y1 = (meanAUC + sdAUC), code = 3, angle = 90, length = 0.05)
+        points(prevSp, meanAUC, pch = 19, cex = 0.8)
+    dev.off()
+
+# # =============================================
+# # 9. Generating predictions from complete model
+# # =============================================
+#
+#     modelPredictions <- predict(model)
+#     saveRDS(modelPredictions, file = './RData/modelPredictions.rds')
+
+# =========================================
+# 10. Generating predictions study area grid
+# =========================================
+
+    # Load HMSC model
+        model <- readRDS('./RData/modelHSMC.rds')
+
+    # Importing data for study grid that I wish to use for species distribution predictions
+        egsl <- readRDS('./RData/egsl_grid.rds')
+
+    # Use 'Bathy_Mean' instead of 'Prof', as 'Prof' comes from northPluri data
+        colnames(egsl)[which(colnames(egsl) == 'Bathy_Mean')] <- 'Prof'
+
+    # 'Prof' is positive, while 'Bathy_Mean' is negative, uniformize for model
+        egsl[, 'Prof'] <- -egsl[, 'Prof']
+
+    # 'x' and 'y' in egsl grid data, change to match environmental variables used
+        colN <- colnames(egsl)
+        colnames(egsl)[colN == 'x'] <- 'LoDeTow'
+        colnames(egsl)[colN == 'y'] <- 'LaDeTow'
+
+    # Remove NAs
+        envCov <- c('Prof','SSAL_MEAN','SalMoyMoy','TempMoyMoy','STEMMEAN','BTEMMEAN','O2_Sat_Mea','LaDeTow','LoDeTow')
+        NAs <- egsl[, envCov] %>%
+                lapply(X = ., FUN = function(x) which(is.na(x))) %>%
+                unlist(.) %>%
+                unique(.)
+
+        egsl <- egsl[-NAs, ]
+
+    # New environmental covariables matrix (X matrix)
+        Xnew <- egsl[, envCov]
+
+    # New site- and plot-level random effect (Pi matrix)
+        PiNew <- data.frame(sampling_unit = as.factor(egsl[, 'ID']),
+                         survey_number = as.factor(rep(1, nrow(egsl))))
+
+    # Organize the data into an HMSCdata object
+        dataEGSL <- as.HMSCdata(X = Xnew, Random = PiNew, scaleX = T, interceptX = T)
+
+    # Generate predictions
+        predEGSL <- predict(model, newdata = dataEGSL)
+
+    # Replace NAs in grid
+        data <- matrix(nrow = (length(NAs) + nrow(predEGSL)), ncol = ncol(predEGSL), data = 0)
+        dimnames(data) = list(paste('ID',seq(1:nrow(data)), sep = ''), colnames(predEGSL))
+        data[NAs, ] <- NA
+        data[seq(1:nrow(data))[-NAs], ] <- predEGSL
+        predEGSL <- data
+
+    # Save predictions
+        saveRDS(predEGSL, file = './RData/predEGSL.rds')
