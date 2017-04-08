@@ -1,0 +1,341 @@
+---
+title: "Joint species distribution modelling of the species of the estuary and gulf of St. Lawrence"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+author: David Beauchesne, Kévin Cazelles, Guillaume Blanchet, Philippe Archambault, Dominique Gravel
+lang: en
+abstract:
+fontfamily: fourier
+linestretch: 1
+fontsize: 10pt
+lof: no
+output:
+pdf_document:
+    highlight: kate
+    toc: yes
+    toc_depth: 3
+    fig_caption: yes
+    keep_tex: yes
+    latex_engine: pdflatex
+    number_section: yes
+md_document:
+    variant: markdown_strict
+---
+
+<!-- render(input = './Script/3_ESGL_spDist.rmd', 'pdf_document') -->
+
+```{r echo = FALSE, eval = TRUE}
+
+    rm(list=ls())
+    setwd("/Users/davidbeauchesne/Dropbox/PhD/PhD_obj2/Structure_Comm_EGSL/EGSL_species_distribution/")
+
+    # Libraries
+        library(reshape2)
+        library(tidyr)
+        library(dplyr)
+        library(magrittr)
+        library(Rcpp)
+        library(RcppArmadillo)
+        library(coda)
+        library(HMSC)
+        library(beanplot)
+        library(corrplot)
+        library(circlize)
+
+    # Load files
+        northPluri <- readRDS('./RData/northPluriCor.rds') # northPluri
+        northPluri_HMSC <- readRDS('./RData/northPluri_HMSC.rds') # northPluri
+        model <- readRDS('./RData/modelHSMC.rds') # HMSC model
+        modelPostSumm <- readRDS('./RData/modelPostSumm.rds') # Load posterior summaries
+        variationPart <- readRDS('./RData/variPart.rds') # Load grouped parameter variance partitioning
+        R2 <- readRDS('./RData/modelR2.rds') # Load individual model thur's R2
+        R2comm <- readRDS('./RData/modelR2comm.rds') # Load mean model thur's R2
+        modelAUC <- readRDS('./RData/modelAUC.rds') # Load individual model thur's R2
+        mixingMeansParamX <- readRDS('./RData/mixingMeansParamX.rds') # mixing objects mean parameters
+
+    # Species list
+        sp <- northPluri[, c('EspGen','N_EspSci')] %>%
+                .[!duplicated(.), ] %>%
+                .[order(.[, 'EspGen']), ]
+
+    # Parameters to use in the text
+        nSp <- nrow(sp) # number of species
+        nObs <- nrow(northPluri) # number of observations
+
+
+```
+<!-- ============== -->
+<!-- MAIN TEXT BODY -->
+<!-- ============== -->
+
+# To do
+
+**Next steps:**
+
+- Incorporate categorical environmental covariables (*e.g.* sediment type, habitat type)
+- Integrate R code to text for parameters (*e.g.* number of taxa in analysis)
+- Read Ovaskainen 2017 Ecology
+- Format and incorporate other datasets
+- Get better environmental data
+- Contact people for zooplankton and phytoplankton data
+- Get marine mammals data (not easy)
+- Find how multiple different datasets could be grouped together in a single JSDM analysis?
+
+
+**Questions:**
+
+- Is it possible to use categorical variables with JSDMs? Oui mais non, il faut décoder les variables?
+```{r echo = TRUE, eval = FALSE}
+x<-factor(rep(letters[1:3],4))
+model.matrix(~x)
+model.matrix(~x-1)
+```
+
+<!-- ======================================================================= -->
+<!-- ======================================================================= -->
+
+# Contacts
+
+- Denis Bernier (data)
+- Guillaume Blanchet (method)
+- Claude Nozères (data)
+
+<!-- ======================================================================= -->
+<!-- ======================================================================= -->
+
+# Overview
+
+The goal of this document is to present the process to evaluate the distribution of species in the estuary and gulf of St. Lawrence (EGSL). This corresponds to the second half of my second thesis objective, which aims at predicting the spatial distribution of EGSL species. I still have in mind to establish a similar process to the one I did to [predict species interactions](Predict_distribution.md), but with species distribution and . I think at some point I should spend some time working on this. I should be able to code something much more quickly than I did for species interactions, by using a few species as examples to evaluate whether it could cork or not. For now, I am using real occurrence data for St. Lawrence species in species distribution models. Here is the data I have so far (make a table with this, with data information and reference):
+
+<!-- ======================================================================= -->
+<!-- ======================================================================= -->
+
+# Objectives
+
+Evaluate the spatial structure of biotic interactions networks in the estuary and gulf of St. Lawrence
+
+1. Predict the spatial distribution of species in the estuary and gulf of St. Lawrence (This document)
+2. Predict biotic interactions among co-occurring species in the estuary and gulf of St. Lawrence (iEat algorithm)
+3. Characterize the spatial structure of interaction networks (*e.g.* richness, connectance, number of links, etc) in the estuary and gulf of St. Lawrence (Full 2nd chapter)
+
+
+<!-- ======================================================================= -->
+<!-- ======================================================================= -->
+
+# Methodology
+
+## Data
+
+*Occurrence data*
+
+The data used to predict the spatial structure of estuary and northern gulf of St. Lawrence is from DFO's [annual plurispecific survey](../topicIndex/northGulf-dfo.md) of the Northern Gulf pf St. Lawrence between 2010 and 2015. <!-- Add details and reference. Should also be detailed in the document describing the raw data --> The raw data was formatted to retain, to the extent possible, only taxa at the species level. Groups that were too coarse taxonomically were generally removed from the dataset, except certain widely distributed and abundant groups (*e.g.* Porifera). Taxa that were closely related taxonomically, shared similar functional roles and were hard to distinguish in the field during identification were aggregated to avoid biases. Taxa removal and aggregation is documented on my [personal wiki](../topicIndex/northGulf-EGSLspdist.md) and the code is available on [github](www.github.com/). Furthermore, only taxa with a minimum number of **50** records were retained for further analyses to allow for the use of JSDMs (@ref).
+
+<!-- To complete, search for minimal number of records required -->
+<!-- Eventually copy northGulf-format.md w/in github repo -->
+<!-- Properly cite website and file on github repo -->
+
+The dataset used for the analyses contains ```r nObs``` observations for 124 taxa (218.5 $\pm$ 183 observations per taxon). The survey data spans 5 years, for a total of 878 stations (176 $\pm$ 16 stations per year).
+
+<!-- Numbers at the moment are considering a minimal number of records = 50 -->
+<!-- Consult str(northPluriCor) from northGulf-format.md to confirm, after the minimal number of records is established and removal and aggregations have been reviewed by Lisa and Claude -->
+
+<br/>
+*Environmental covariables*
+
+More details is available [here](../topicIndex/envCov_EGSLspdist.md)
+
+Les données environnementales utilisées proviendront principalement d’un exercice de modélisation des habitats benthiques (Dutil et al., 2011) et épipélagiques (c.-à-d. les 30 premiers mètres de la colonne d’eau; Dutil et al., 2012). Ces bases de données caractérisent une multitude de données environnementales géographiques, physiques et sur la colonne d’eau pour l’ensemble de l’EGSL. Les variables utilisées pour prédire la distribution des organismes benthiques seront la profondeur, la salinité, la température de fond et de surface, et le niveau de saturation en oxygène (Moritz et al., 2013, 2015; Albouy et al., 2014).
+
+# Joint species distribution models
+
+We performed joint species distribution models (@ref) to predict the potential distribution of all taxa for which we had occurrence data. Survey number (*i.e.* corresponds to years the survey was performed) and station (trawl sessions) were used as a random factor. *I don't think that stations need to be mentionned, as there is no station replication. Eventually I could use the cells from my study grid to evaluate which stations are spatially dependent. Ultimately some formal analysis of station independence should also be performed*
+
+*Describe methodology!*
+
+## MCMC diagnostics: trace and density plots
+
+Mixing of the chains has to be checked when performing MCMC-based Bayesian inference, *i.e.* verify if the chains become stationary and sufficiently long to provide a representative sample from the posterior. Parameter estimates should also be reviewed to make sure that they are properly estimated, *i.e.* the distribution of the density of parameter values should be normally distributed<!-- bell-shaped?? -->. Visual inspection of trace and density plots (@figure1) shows that chains seem to be converging properly and that parameter are properly estimated.
+
+## Parameter summaries: posterior probabilities or credible intervals
+
+We use the 95% credible intervals of parameters in order to assess the level of statistical support for the influence of environmental covariables on species occurrence (@figure2). Parameters with intervals that overlap with `0` are deemed uninformative in predicting species spatial occurrence.
+
+## Variance partitioning
+
+We partition the proportion of the variance explained by groups of parameters (*i.e.* Depth, Temperature, Oxygen and Spatial) for each taxa. The sum of variance explained by the groups thus amounts to 100% for all taxa, although the model does not explain all the variation in species distribution.
+
+## Predictive power of the model
+
+*Add text*
+
+## Monte Carlo cross-validation - AUC under ROC curves
+
+Cross-validation of HMSC models was performed using Monte Carlo cross-validation, which is a repeated random sub-sampling validation process using 20% of observations (trawl sessions) as validation data and the remaining 80% as training data for each iteration (n = 20). Rather than sampling at the species scale, we sampled at the scale of trawling activities since HMSC are community level models. Random sampling was also stratified within years. Validation was evaluated using the area under the curve (AUC) of ROC curves (@ref), which ranges between 0 (reverse predictions) and 1 (perfect predictions), with models with AUC values close to 0.5 performing no better than random expectation.
+
+## Association networks
+
+*Add text*
+
+
+
+<!-- ======================================================================= -->
+<!-- ============================ Figures ================================== -->
+<!-- ======================================================================= -->
+
+```{r echo = FALSE, results = 'asis', fig.height = 12, fig.width = 6, fig.align = 'center'}
+
+# Trace and density plots to visually diagnose mcmc chains
+# Another way to check for convergence is to use diagnostic tests such as Geweke's convergence diagnostic (geweke.diag function in coda) and the Gelman and Rubin's convergence diagnostic (gelman.diag function in coda).
+    par(mfrow = c(10,2), mar = rep(2, 4))
+    for(i in 1:ncol(mixingMeansParamX)) {
+      traceplot(mixingMeansParamX[,i], col = "blue", main = paste('Trace of ', colnames(mixingMeansParamX)[i]))
+      densplot(mixingMeansParamX[,i], col = "orange", main = paste('Density of ', colnames(mixingMeansParamX)[i]))
+    }
+```
+Figure 1. MCMC trace (blue) and density (orange) plots showing the mixing chains for environmental parameters: depth (Prof), annual mean surface salinity (SSAL-MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2-Sat-Mea). MCMC iterations are shown on the x-axis. Trace and density plot y-axes show parameter values at each iteration and density for parameter values, respectively. The black dots on the density plots represent the MCMC iterations. The MCMC chain was run for 10 000 iterations with 1000 burning iterations and a thin value set to 10. Trace and density plots were respectively produced using traceplot and densplot from the coda package.
+<!-- Another way to check for convergence is to use diagnostic tests such as Geweke's convergence diagnostic (geweke.diag function in coda) and the Gelman and Rubin's convergence diagnostic (gelman.diag function in coda). -->
+
+
+```{r echo = FALSE, results = 'asis', fig.height = 12, fig.width = 6, fig.align = 'center'}
+# Credible intervals
+
+    beg <- seq(1,nrow(modelPostSumm), by = 124)
+    end <- seq(124,nrow(modelPostSumm), by = 124)
+    sign <- abs(as.numeric(modelPostSumm[, 'lowerCI'] <= 0 & modelPostSumm[, 'upperCI'] >=0) - 3)
+    lab <- northPluri[, c('EspGen','N_EspSci')] %>%
+            .[!duplicated(.), ] %>%
+            .[order(.[, 'EspGen']), ]
+
+# Export figure
+    par(mfrow = c((length(beg)+1),1))
+    for(i in 1:length(beg)) {
+        paramXCITable <- modelPostSumm[beg[i]:end[i], ]
+        cols <- sign[beg[i]:end[i]]
+        par(mar=c(1,2,1,1))
+        plot(0, 0, xlim = c(1, nrow(paramXCITable)), ylim = round(range(paramXCITable)), type = "n", xlab = "", ylab = "", main=paste(colnames(mixingMeansParamX)[i]), xaxt="n", bty = 'n')
+        axis(1,1:124,las=2, labels = rep('',124))
+        abline(h = 0,col = 'grey')
+        arrows(x0 = 1:nrow(paramXCITable), x1 = 1:nrow(paramXCITable), y0 = paramXCITable[, 2], y1 = paramXCITable[, 3], code = 3, angle = 90, length = 0.05, col = cols)
+        points(1:nrow(paramXCITable), paramXCITable[,1], pch = 15, cex = 1, col = cols)
+    }
+    mtext(text = lab[,'N_EspSci'], side = 1, line = 1, outer = FALSE, at = 1:124, col = 1, las = 2, cex = 0.4)
+```
+Figure 2. 95% Credible intervals for environmental parameters: depth (Prof), annual mean surface salinity (SSAL_MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2_Sat_Mea). Informative parameters per taxa per environmental covariables are those whose credible interval does not overlap with `0`. Informative and uninformative parameters are identified in green and red, respectively. The MCMC chain was run for 10 000 iterations with 1000 burning iterations and a thin value set to 10.
+
+\pagebreak
+
+```{r echo = FALSE, results = 'asis', fig.height = 4, fig.width = 6, fig.align = 'center'}
+    nGroup <- ncol(variationPart)
+    Colour <- rainbow(n = nGroup, s = 1, v = 1, start = 0, end = max(1, nGroup - 1)/nGroup, alpha = 1)
+
+    par(mar = c(6,3,1,1))
+    barplot(t(variationPart), col=Colour, names.arg = sp[, 'N_EspSci'], las = 2, cex.names = 0.4, cex.axis = 0.6)
+
+    # Create legend elements
+        legendVector <- character(nGroup)
+        variPartLabel <- colnames(variationPart)
+
+        for(i in 1:nGroup) {
+            legendVector[i] <- paste(variPartLabel[i], ' (mean = ', round(mean(variationPart[, i]), 4)*100, "%)", sep="")
+        }
+
+    legend('bottomleft', legend = legendVector, fill = Colour, bg = 'white', cex = 0.5)
+```
+
+<br/>
+Figure 3. Plot of the variance partitioning between, *i.e.* the proportion of the variance explained by environmental covariables. All environmental covariables (*i.e.* depth (Prof), annual mean surface salinity (SSAL_MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2_Sat_Mea)) were grouped in order to visually represent the proportion of variation in spatial distribution they explain compared to the Intercept and the random variables. The legend shows mean values for all taxa.
+
+\pagebreak
+
+```{r echo = FALSE, results = 'asis', fig.height = 5, fig.width = 6, fig.align = 'center'}
+    # Prevalence
+        prevSp <- colSums(northPluri_HMSC$Y)
+
+    # Draw figure
+        plot(prevSp, R2, xlab = "Prevalence", ylab = expression(R^2), cex = 0.8, pch=19, las=1, cex.lab = 1, main = 'Explanatory power of the model', ylim = c(0,1))
+        abline(h = R2comm, col = "blue", lwd = 2)
+```
+
+<br/>
+Figure 4. Predictive power of the model evaluated by comparing coefficients of determination (R^2) as a function of the prevalence, *i.e.* the number of trawl sessions in which taxa were captured. Each dot represent an individual taxa. The evaluated R^2 is the Tjur's R^2, which is the mean model prediction for sampling units where a taxa occurs minus the mean model prediction for sampling units where the species does not occur (@Tjur2009). The current version of predictive power assessment is based on the same data that was used to generate the model. It is therefore likely that R^2 values are overestimated due to overfitting. We will ultimately do cross-validation by using only 80% of the original data points for each taxa, keeping the remaining 20% for predictive power assessment.
+
+<!-- Tue Tjur. Coefficients of determination in logistic regression models: A new proposal - The coefficient of discrimination". In: The American Statistician 63.4 (2009), pp. 366-372. -->
+
+\pagebreak
+
+```{r echo = FALSE, results = 'asis', fig.height = 5, fig.width = 6, fig.align = 'center'}
+    meanAUC <- colMeans(modelAUC)
+    sdAUC <- apply(modelAUC, MARGIN = 2, FUN = sd)
+
+    # Plot
+        plot(prevSp, meanAUC, ylim = c(0,1), xlab = "Prevalence", ylab = 'AUC', cex = 0.8, pch=19, las=1, cex.lab = 1, main = 'Monte Carlo cross-validation with AUC of ROC curves')
+        abline(h = 0.5, col = 'grey')
+        arrows(x0 = prevSp, x1 = prevSp, y0 = (meanAUC - sdAUC), y1 = (meanAUC + sdAUC), code = 3, angle = 90, length = 0.05)
+        points(prevSp, meanAUC, pch = 19, cex = 0.8)
+```
+<br/>
+Figure 5. Monte Carlo Cross-validation using AUC (mean +- sd) as a function of prevalence *i.e.* the number of trawl sessions in which taxa were captured. Each dot represent an individual taxa. Random sampling was stratified within years in order to set aside 20% of observations (*i.e.* trawl sessions) used as validation data and the remaining 80% used as training data for the model for each iteration (n = 20). Environmental covariables used to build the model were depth (Prof), annual mean surface salinity (SSAL_MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2_Sat_Mea), latitude and longitude of trawling activities. The MCMC chain was run for 10 000 iterations with 1000 burning iterations and a thin value set to 10.
+
+\pagebreak
+
+```{r echo = FALSE, eval = TRUE}
+# =======================
+# 6. Association networks
+# =======================
+    # Extract all estimated associatin matrix
+        assoMat <- HMSC::corRandomEff(model)
+    # Average
+        siteMean <- apply(assoMat[, , , 1], 1:2, mean)
+        plotMean <- apply(assoMat[, , , 2], 1:2, mean)
+        colnames(plotMean) <- rownames(plotMean) <- lab[,'N_EspSci']
+
+    #--------------------
+    ### Site level effect
+    #--------------------
+    # Build matrix of colours for chordDiagram
+        siteDrawCol <- matrix(NA, nrow = nrow(siteMean), ncol = ncol(siteMean))
+        siteDrawCol[which(siteMean > 0.4, arr.ind=TRUE)]<-"red"
+        siteDrawCol[which(siteMean < -0.4, arr.ind=TRUE)]<-"blue"
+    # Build matrix of "significance" for corrplot
+        siteDraw <- siteDrawCol
+        siteDraw[which(!is.na(siteDraw), arr.ind = TRUE)] <- 0
+        siteDraw[which(is.na(siteDraw), arr.ind = TRUE)] <- 1
+        siteDraw <- matrix(as.numeric(siteDraw), nrow = nrow(siteMean), ncol = ncol(siteMean))
+    #--------------------
+    ### Plot level effect
+    #--------------------
+    # Build matrix of colours for chordDiagram
+        plotDrawCol <- matrix(NA, nrow = nrow(plotMean), ncol = ncol(plotMean))
+        plotDrawCol[which(plotMean > 0.4, arr.ind=TRUE)]<-"red"
+        plotDrawCol[which(plotMean < -0.4, arr.ind=TRUE)]<-"blue"
+    # Build matrix of "significance" for corrplot
+        plotDraw <- plotDrawCol
+        plotDraw[which(!is.na(plotDraw), arr.ind = TRUE)] <- 0
+        plotDraw[which(is.na(plotDraw), arr.ind = TRUE)] <- 1
+        plotDraw <- matrix(as.numeric(plotDraw), nrow = nrow(plotMean), ncol = ncol(plotMean))
+```
+
+```{r echo = FALSE, eval = TRUE, results = 'asis', fig.height = 6, fig.width = 6, fig.align = 'center'}
+    # siteDraw plots
+        # Matrix plot
+        Colour <- colorRampPalette(c("blue", "white", "red"))(200)
+        corrplot::corrplot(plotMean, method = "color", col = Colour, type = "lower", diag = FALSE, p.mat = plotDraw, tl.srt = 65, tl.cex = 0.4, pch.cex = 0.3, tl.col = 'black')
+```
+
+<br/>
+Figure 4. The HMSC framework allows for the evaluation of taxa spatial association networks. This figure is a matrix plot depicting the spatial associations between 124 St. Lawrence taxa. Red and blue cells depict taxa that are respectively positive or negative associations, *i.e.* associations that are more or less likely to be associated spatially compared to random expectations. Cells marked with a 'X' have absolute correlation values smaller than 0.4.
+
+\linebreak
+
+```{r echo = FALSE, eval = TRUE, results = 'asis', fig.height = 6, fig.width = 6, fig.align = 'center'}
+        # Chord diagram
+        circlize::chordDiagram(plotMean, symmetric = TRUE, annotationTrack = 'grid', grid.col = "grey", col = plotDrawCol, preAllocateTracks = 1)
+        circlize::circos.trackPlotRegion(track.index = 1, panel.fun = function(x, y) {
+          xlim = circlize::get.cell.meta.data("xlim")
+          ylim = circlize::get.cell.meta.data("ylim")
+          sector.name = circlize::get.cell.meta.data("sector.index")
+          circlize::circos.text(mean(xlim), ylim[1] + .1, sector.name, facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex = 0.4)
+        #   circlize::circos.axis(h = "top", labels.cex = 0.5, major.tick.percentage = 0.2, sector.index = sector.name, track.index = 2)
+        }, bg.border = NA)
+```
+<br/>
+Figure 5. The HMSC framework allows for the evaluation of taxa spatial association networks. This figure is a chord diagram depicting the spatial associations between 124 St. Lawrence taxa. Red and blue links depict taxa that are respectively positive or negative associations, *i.e.* associations that are more or less likely to be associated spatially compared to random expectations. Only associations with a correlation higher than 0.4 are drawn on the diagram. The width of grey areas for taxa is proportional to their associative importance among taxa considered.
