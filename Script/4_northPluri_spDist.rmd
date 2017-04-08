@@ -1,0 +1,111 @@
+---
+title: "Joint species distribution models for St. Lawrence taxa"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+author: David Beauchesne
+lang: en
+abstract:
+fontfamily: fourier
+linestretch: 1
+fontsize: 10pt
+lof: no
+output:
+pdf_document:
+    highlight: kate
+    toc: yes
+    toc_depth: 3
+    fig_caption: yes
+    keep_tex: yes
+    latex_engine: pdflatex
+    number_section: yes
+md_document:
+    variant: markdown_strict
+---
+
+<!-- render(input = './Script/4_northPluri_spDist.rmd', 'pdf_document') -->
+
+# Individual taxon diagnostics from HMSC model
+
+This document is used as a
+
+\pagebreak
+
+```{r comment=">", echo = FALSE, eval = TRUE, include = FALSE}
+    rm(list=ls())
+    setwd("/Users/davidbeauchesne/Dropbox/PhD/PhD_obj2/Structure_Comm_EGSL/EGSL_species_distribution/")
+
+    library(reshape2)
+    library(tidyr)
+    library(dplyr)
+    library(sp)
+    library(rgdal)
+
+    # Functions
+        source('../../../PhD_RawData/script/function/colorBar.r')
+        source('../../../PhD_RawData/script/function/plotEGSL.r')
+
+    # Load files
+        predEGSL <- readRDS('./RData/predEGSL.rds') # Load predictions
+        modelPostSumm <- readRDS('./RData/modelPostSumm.rds') # Load posterior summaries
+        variationPart <- readRDS('./RData/variPartInd.rds') # Load individual parameter variance partitioning
+        modelR2 <- readRDS('./RData/modelR2.rds') # Load individual model thur's R2
+        modelR2comm <- readRDS('./RData/modelR2comm.rds') # Load mean model thur's R2
+        modelAUC <- readRDS('./RData/modelAUC.rds') # Load individual model thur's R2
+        egsl_grid <- readOGR(dsn = "../../../PhD_obj0/Study_Area/RData/", layer = "egsl_grid") # Load grid
+
+    # Species list
+        northPluri <- readRDS('./RData/northPluriCor.rds')
+        sp <- northPluri[, c('EspGen','N_EspSci')] %>%
+                .[!duplicated(.), ] %>%
+                .[order(.[, 'EspGen']), ]
+
+        nSp <- nrow(sp) # number of taxa
+
+    # Color palette
+        rbPal <- colorRampPalette(c('#2f6eb9','#2aadba','#b45f5f')) # color palette
+
+    # Environmental covariable names
+        coVar <- unique(gsub('_[0-9].*', '', rownames(modelPostSumm)))
+        nCoVar <- length(coVar)
+```
+
+```{r echo = FALSE, results = 'asis', fig.height = 6, fig.width = 6, fig.align = 'center'}
+# Loop through species
+    taxa <- as.character(sp[,'EspGen'])
+    for(i in 1:length(taxa)) {
+        # --------------------------------------------------------------------------------
+        # Calculating elements to create individual diagnostics
+            # Individual taxa predictions
+            spIND <- sp[sp == taxa[i], 'N_EspSci']
+            data <- predEGSL[, taxa[i]]
+            cols <- rbPal(50)[as.numeric(cut(data, breaks = 50))]
+
+            # Posterior summary table
+            postSumm <- matrix(nrow = nrow(modelPostSumm) / nSp, ncol = 5, dimnames = list(c(), c('Covariables','Mean parameter estimate','Lower 95% CI','Upper 95% CI', 'Proportion of variance explained (%)')))
+            postSumm[,1] <- coVar
+            postSumm[, 2:4] <- round(modelPostSumm[seq(from = i, by = nSp, length.out = nCoVar), ], 2)
+            postSumm[, 5] <- round(variationPart[i, 1:nCoVar] * 100, 2)
+        # --------------------------------------------------------------------------------
+
+        # --------------------------------------------------------------------------------
+        # Elements to print in the documents
+        cat('\n')
+        cat("#Taxa: ", paste(spIND), "\n")
+        print(knitr::kable(postSumm, caption = 'Posterior summaries', align = c('l','c','c','c','c')))
+        cat('\n\n')
+        cat(paste('Tjur\'s', expression(R^2), ': ', round(modelR2[i],2)), '\n')
+        cat('\n')
+        cat(paste('AUC: ', round(mean(modelAUC[, i]), 2), ' ± ', round(sd(modelAUC[, i]), 2)), '\n')
+        cat('\n')
+        cat('---------',"\n")
+        cat('\n')
+        layout(matrix(c(1,1,1,0,2,0),ncol=2), width = c(9,1), height = c(3,3,3))
+        par(mar = c(0,0,0,0))
+        plot(egsl_grid, col = cols, border = cols)
+        text(x = 350000, y = 950000, labels = 'Occurrence probability', cex = 1.5)
+        text(x = 350000, y = 915000, labels = 'Pay attention to legend, does not go from 0 to 1. Needs to be fixed')
+        colorBar(rbPal(50), min = round(min(data, na.rm = T), 2), max = round(max(data, na.rm = T), 2), align = 'vertical')
+        cat('\n\n\\pagebreak\n')
+        # --------------------------------------------------------------------------------
+
+    }
+```
