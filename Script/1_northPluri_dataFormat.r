@@ -50,6 +50,7 @@ library(stringr)
         # - Liparidae (stays at the species level)
         # - Lycodes (stays at the species level) + Lycodes terraenovae & Lycodes esmarkii
         # - Lycenchelys (stays at the species level)
+        # - Adjust Eumicrotremus spinosus 
 
     combineTaxa <- c('Strongylocentrotus sp. | Strongylocentrotus droebachiensis', # Identification: hard to distinguish
                      'Sebastes sp. | Sebastes norvegicus', # Identification: hard to distinguish
