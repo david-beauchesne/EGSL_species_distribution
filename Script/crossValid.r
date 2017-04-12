@@ -57,17 +57,13 @@ crossValidation <- function(data, nCV, validPct, as.strata = TRUE, family = "pro
 
                 # Validation dataset
                     dataValid <- data
-                    dataValid[[1]] <- dataValid[[1]][removeSample, ]
-                    dataValid[[2]] <- dataValid[[2]][removeSample, ]
-                    dataValid[[3]] <- dataValid[[3]][removeSample, ]
+                    for (i in 1:3) dataValid[[i]] <- dataValid[[i]][removeSample, ]
                     dataValid[[3]][, 1] <- as.factor(as.character(dataValid[[3]][, 1])) # Need the proper number of levels, build new index
 
                 # Training dataset
                     # HMSC dataset minus sampling units set aside for cross validation
                     dataTrain <- data
-                    dataTrain[[1]] <- dataTrain[[1]][-removeSample, ]
-                    dataTrain[[2]] <- dataTrain[[2]][-removeSample, ]
-                    dataTrain[[3]] <- dataTrain[[3]][-removeSample, ]
+                    for (i in 1:3) dataTrain[[i]] <- dataTrain[[i]][-removeSample, ]
                     dataTrain[[3]][, 1] <- as.factor(as.character(dataTrain[[3]][, 1])) # Need the proper number of levels, build new index
 
             # ------------------------------------
