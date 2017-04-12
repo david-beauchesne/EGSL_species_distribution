@@ -324,7 +324,7 @@ Figure 5. Monte Carlo Cross-validation using AUC (mean +- sd) as a function of p
 <br/>
 Figure 4. The HMSC framework allows for the evaluation of taxa spatial association networks. This figure is a matrix plot depicting the spatial associations between 124 St. Lawrence taxa. Red and blue cells depict taxa that are respectively positive or negative associations, *i.e.* associations that are more or less likely to be associated spatially compared to random expectations. Cells marked with a 'X' have absolute correlation values smaller than 0.4.
 
-\linebreak
+\pagebreak
 
 ```{r echo = FALSE, eval = TRUE, results = 'asis', fig.height = 6, fig.width = 6, fig.align = 'center'}
         # Chord diagram
