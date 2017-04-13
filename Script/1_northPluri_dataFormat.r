@@ -1,8 +1,6 @@
-# Run init.r before other scripts
+# Run init.r before other scripts (set the working directory and load the pkges )
 rm(list=ls())
- # for use in R console.
- # set own relevant directory if working in R console, otherwise ignore if in terminal
-setwd("/Users/davidbeauchesne/Dropbox/PhD/PhD_obj2/Structure_Comm_EGSL/EGSL_species_distribution/")
+
 # -----------------------------------------------------------------------------
 # PROJECT:
 #    Evaluating the structure of the communities of the estuary
@@ -14,10 +12,6 @@ setwd("/Users/davidbeauchesne/Dropbox/PhD/PhD_obj2/Structure_Comm_EGSL/EGSL_spec
 #   The goal of this script is to run JSDMs from the HMSC package on data from
 #       the annual northern Gulf DFO trawl survey
 # -----------------------------------------------------------------------------
-library(reshape2)
-library(tidyr)
-library(dplyr)
-library(stringr)
 
 
 
@@ -50,7 +44,7 @@ library(stringr)
         # - Liparidae (stays at the species level)
         # - Lycodes (stays at the species level) + Lycodes terraenovae & Lycodes esmarkii
         # - Lycenchelys (stays at the species level)
-        # - Adjust Eumicrotremus spinosus 
+        # - Adjust Eumicrotremus spinosus
 
     combineTaxa <- c('Strongylocentrotus sp. | Strongylocentrotus droebachiensis', # Identification: hard to distinguish
                      'Sebastes sp. | Sebastes norvegicus', # Identification: hard to distinguish

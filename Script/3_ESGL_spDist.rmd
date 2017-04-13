@@ -1,7 +1,7 @@
 ---
 title: "Joint species distribution modelling of the species of the estuary and gulf of St. Lawrence"
 date: "`r format(Sys.time(), '%d %B %Y')`"
-author: David Beauchesne, Kévin Cazelles, Guillaume Blanchet, Philippe Archambault, Dominique Gravel
+author: David Beauchesne, Kevin Cazelles, Guillaume Blanchet, Philippe Archambault, Dominique Gravel
 lang: en
 abstract:
 fontfamily: fourier
@@ -191,7 +191,7 @@ Cross-validation of HMSC models was performed using Monte Carlo cross-validation
       densplot(mixingMeansParamX[,i], col = "orange", main = paste('Density of ', colnames(mixingMeansParamX)[i]))
     }
 ```
-Figure 1. MCMC trace (blue) and density (orange) plots showing the mixing chains for environmental parameters: depth (Prof), annual mean surface salinity (SSAL-MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2-Sat-Mea). MCMC iterations are shown on the x-axis. Trace and density plot y-axes show parameter values at each iteration and density for parameter values, respectively. The black dots on the density plots represent the MCMC iterations. The MCMC chain was run for 10 000 iterations with 1000 burning iterations and a thin value set to 10. Trace and density plots were respectively produced using traceplot and densplot from the coda package.
+Figure 1. MCMC trace (blue) and density (orange) plots showing the mixing chains for environmental parameters: depth (Prof), annual mean surface salinity (SSAL-MEAN), annual bottom mean salinity (SalMoyMoy), annual bottom mean temperature (TempMoyMoy), annual mean surface temperature (STEMMEAN), annual mean temperature at 30 meters depth (BTEMMEAN), mean bottom oxygen saturation (O2-Sat-Mea). MCMC iterations are shown on the x-axis. Trace and density plot y-axes show parameter values at each iteration and density for parameter values, respectively. The black dots on the density plots represent the MCMC iterations. The MCMC chain was run for 100 000 iterations with 1000 burning iterations and a thin value set to 100. Trace and density plots were respectively produced using traceplot and densplot from the coda package.
 <!-- Another way to check for convergence is to use diagnostic tests such as Geweke's convergence diagnostic (geweke.diag function in coda) and the Gelman and Rubin's convergence diagnostic (gelman.diag function in coda). -->
 
 
