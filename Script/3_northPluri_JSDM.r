@@ -271,6 +271,8 @@ library(magrittr)
         siteMean <- apply(assoMat[, , , 1], 1:2, mean)
         plotMean <- apply(assoMat[, , , 2], 1:2, mean)
         colnames(plotMean) <- rownames(plotMean) <- sp[,'N_EspSci']
+        saveRDS(plotMean, file = './RData/plotMean.rds')
+
 
     #--------------------
     ### Site level effect
