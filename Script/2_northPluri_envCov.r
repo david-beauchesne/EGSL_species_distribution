@@ -18,7 +18,9 @@ library(sp)
 library(rgdal)
 library(rgeos)
 library(reshape2)
-source('../../../PhD_RawData/Script/Function/coordTOsppt.r')
+# source('../../../PhD_RawData/Script/Function/coordTOsppt.r')
+source('../../MEGA/MEGAsync/PhDData/Unclassified/Scripts/script/Function/coordTOsppt.r')
+
 
 # Importing data required data from RawData
     northPluri <- readRDS('./RData/northPluriCor.rds')
@@ -32,8 +34,10 @@ source('../../../PhD_RawData/Script/Function/coordTOsppt.r')
     spptmid <- coordTOsppt(matCoord = matCoordMid, data = northPluri, proj = proj, type = "2")
 
 # Import environmental data
-    epipelagic <- readOGR(dsn = "../../../PhD_RawData/data/Epipelagic_habitats_DFO", layer = "St_Lawrence_coastal_and_epipelagic_habitats")
-    benthic <- readOGR(dsn = "../../../PhD_RawData/data/Benthic_habitats_DFO", layer = "Quadrillage_10X10km_Marin")
+    # epipelagic <- readOGR(dsn = "../../../PhD_RawData/data/Epipelagic_habitats_DFO", layer = "St_Lawrence_coastal_and_epipelagic_habitats")
+    # benthic <- readOGR(dsn = "../../../PhD_RawData/data/Benthic_habitats_DFO", layer = "Quadrillage_10X10km_Marin")
+    epipelagic <- readOGR(dsn = "../../MEGA/MEGAsync/PhDData/Unclassified/Epipelagic_habitats_DFO", layer = "St_Lawrence_coastal_and_epipelagic_habitats")
+    benthic <- readOGR(dsn = "../../MEGA/MEGAsync/PhDData/Unclassified/Benthic_habitats_DFO", layer = "Quadrillage_10X10km_Marin")
 
 # Transform point projection to environmental data projection
     spptmid <- spTransform(spptmid, CRSobj = CRS(proj4string(epipelagic)))
@@ -50,7 +54,16 @@ source('../../../PhD_RawData/Script/Function/coordTOsppt.r')
 
 # Check for correlation between environmental covariables
     northPluri_wide <- dcast(northPluri,
-                             formula = No_Rel + No_Stn + DatDeTow + DatFiTow + HreDeb + HreFin + LaDeTow + LoDeTow + LaFiTow + LoFiTow + Prof_1 + Prof_2 + Prof + SSTWK30 + SSAL_MEAN + FWRINFSR + STEMMEAN + BTEMMEAN + SANDBEACH + MUDFLAT + MARSH + SEDIMENT_C + HAB_C_E + Bathy_Mean + Geomorph_1 + O2_Sat_Mea + SalMoyMoy + TempMoyMoy + SS_Code + Megahabita + MHVar_3x3 + SalMinMoy + SalMaxMoy + TempMinMoy + TempMaxMoy + TURBIDMEAN + SSAL_MIN + SSAL_MAX + BSAL_MEAN + BSAL_MIN + BSAL_MAX + STEMMIN + STEMMAX + BTEMMIN + BTEMMAX ~ EspGen,
+                             formula = No_Rel + No_Stn + DatDeTow + DatFiTow + HreDeb +
+                                       HreFin + LaDeTow + LoDeTow + LaFiTow + LoFiTow +
+                                       Prof_1 + Prof_2 + Prof + SSTWK30 + SSAL_MEAN +
+                                       FWRINFSR + STEMMEAN + BTEMMEAN + SANDBEACH + MUDFLAT +
+                                       MARSH + SEDIMENT_C + HAB_C_E + Bathy_Mean +
+                                       Geomorph_1 + O2_Sat_Mea + SalMoyMoy + TempMoyMoy +
+                                       SS_Code + Megahabita + MHVar_3x3 + SalMinMoy + SalMaxMoy +
+                                       TempMinMoy + TempMaxMoy + TURBIDMEAN + SSAL_MIN + SSAL_MAX +
+                                       BSAL_MEAN + BSAL_MIN + BSAL_MAX + STEMMIN + STEMMAX + BTEMMIN +
+                                       BTEMMAX ~ EspGen,
                              value.var = 'EspGen',
                              fun.aggregate = length)
 

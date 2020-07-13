@@ -137,7 +137,7 @@ library(magrittr)
 
         model <- hmsc(northPluri_HMSC,
                       family = "probit",
-                      niter = 100000,
+                      niter = 10000,
                       nburn = 1000,
                       thin = 100)
 
@@ -238,7 +238,7 @@ library(magrittr)
     Colour <- rainbow(n = nGroup, s = 1, v = 1, start = 0, end = max(1, nGroup - 1)/nGroup, alpha = 1)
 
     jpeg(paste(fig,'variancePartitioning.jpeg',sep=''), width = 6, height = 4, res = 150, units = 'in')
-        par(mar = c(6,3,1,1))
+        par(mfrow = c(1,1), mar = c(6,3,1,1))
         barplot(t(variationPart), col=Colour, names.arg = sp[, 'N_EspSci'], las = 2, cex.names = 0.4, cex.axis = 0.6)
 
         # Create legend elements

@@ -22,6 +22,7 @@ library(stringr)
 
 
 # Importing data required data from RawData
+    # northPluri <- readRDS('../../MEGA/MEGAsync/PhDData/Unclassified/NordGolfe_RelevePluriSp_MPO/northPluri.rds')
     northPluri <- readRDS('../../../PhD_RawData/data/NordGolfe_RelevePluriSp_MPO/northPluri.rds')
     northPluri[,'N_EspSci'] <- str_trim(northPluri[,'N_EspSci'], side = 'both')
     northPluri[,'N_EspF'] <- as.character(northPluri[,'N_EspF'])
@@ -50,7 +51,7 @@ library(stringr)
         # - Liparidae (stays at the species level)
         # - Lycodes (stays at the species level) + Lycodes terraenovae & Lycodes esmarkii
         # - Lycenchelys (stays at the species level)
-        # - Adjust Eumicrotremus spinosus 
+        # - Adjust Eumicrotremus spinosus
 
     combineTaxa <- c('Strongylocentrotus sp. | Strongylocentrotus droebachiensis', # Identification: hard to distinguish
                      'Sebastes sp. | Sebastes norvegicus', # Identification: hard to distinguish
